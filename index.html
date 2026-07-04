@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ape-review — Rate the Troop</title>
+  <meta name="description" content="ape-review: review, score, and discuss the finest ape photography on the internet." />
+  <meta name="theme-color" content="#020617" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦍</text></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+            display: ["Space Grotesk", "Inter", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    :root { color-scheme: dark; }
+    ::selection { background: rgba(52, 211, 153, 0.35); }
+
+    .nice-scroll { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+    .nice-scroll::-webkit-scrollbar { width: 8px; }
+    .nice-scroll::-webkit-scrollbar-track { background: transparent; }
+    .nice-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    .nice-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    kbd {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border: 1px solid #334155;
+      border-bottom-width: 2px;
+      border-radius: 0.375rem;
+      background: #0f172a;
+      color: #94a3b8;
+      font: 600 0.68rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    @keyframes ape-enter { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+    .ape-enter { animation: ape-enter 0.6s cubic-bezier(0.22, 0.8, 0.35, 1) both; }
+
+    @keyframes name-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .name-in { animation: name-in 0.5s 0.08s ease-out both; }
+
+    @keyframes comment-in { from { opacity: 0; transform: translateY(-10px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .comment-in { animation: comment-in 0.35s ease-out both; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    .rise { animation: rise 0.55s ease-out both; }
+
+    @keyframes stamp-in {
+      0% { opacity: 0; transform: scale(2.4) rotate(-16deg); }
+      55% { opacity: 1; transform: scale(0.94) rotate(-7deg); }
+      78% { transform: scale(1.06) rotate(-10deg); }
+      100% { opacity: 1; transform: scale(1) rotate(-9deg); }
+    }
+    .stamp { animation: stamp-in 0.5s cubic-bezier(0.2, 1.2, 0.35, 1) both; }
+
+    @keyframes confetti-fly {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
+      12% { opacity: 1; }
+      70% { opacity: 1; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.05) rotate(var(--rot)); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx) * 1.1), calc(-50% + var(--dy) + 150px)) scale(0.9) rotate(calc(var(--rot) * 1.4)); }
+    }
+    .confetti-piece { position: absolute; animation: confetti-fly 1.05s cubic-bezier(0.15, 0.65, 0.4, 1) both; will-change: transform, opacity; }
+
+    @keyframes pop-in { from { opacity: 0; transform: scale(0.85) translateY(14px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .pop-in { animation: pop-in 0.4s cubic-bezier(0.2, 1.2, 0.35, 1) both; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 antialiased">
+  <div id="root">
+    <div style="min-height: 100vh; display: grid; place-items: center; font-family: sans-serif; color: #64748b; text-align: center;">
+      <p>🦍 Loading ape-review…<br /><small>If this message stays, open the browser console (F12) for errors.</small></p>
+    </div>
+  </div>
+  <noscript>
+    <p style="padding: 2rem; text-align: center; font-family: sans-serif;">ape-review needs JavaScript to swing into action. 🦍</p>
+  </noscript>
+
+  <!-- Pinned versions: Babel 8 defaults to the automatic JSX runtime, which emits
+       `import` statements and breaks in-browser script tags — Babel 7 is required here. -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react">
+    "use strict";
+
+    /* =====================================================================
+       APE_DATABASE — the single source of truth for every reviewable ape.
+       Add a new ape by appending an object that follows this exact schema:
+         id        : string — unique key (ratings & comments are stored by it)
+         name      : string — display name shown on the hero card
+         species   : string — scientific name shown under the display name
+         imageUrl  : string — direct image URL (base URL, no query string)
+         sourceUrl : string — original page of the photo, used for attribution
+         platform  : string — where the photo lives, e.g. "Unsplash"
+       ===================================================================== */
+    const APE_DATABASE = [
+      {
+        id: "1",
+        name: "Bornean Orangutan",
+        species: "Pongo pygmaeus",
+        imageUrl: "https://images.unsplash.com/photo-1690394432973-bc1d5d0e1964",
+        sourceUrl: "https://unsplash.com/photos/a-close-up-of-an-orangutans-face-Y6ukNp03aYc",
+        platform: "Unsplash",
+      },
+      {
+        id: "2",
+        name: "Silverback Gorilla",
+        species: "Gorilla gorilla",
+        imageUrl: "https://images.unsplash.com/photo-1515513284006-9a59075694b7",
+        sourceUrl: "https://unsplash.com/photos/ZBWvARLyV_Y",
+        platform: "Unsplash",
+      },
+      {
+        id: "3",
+        name: "Chimpanzee",
+        species: "Pan troglodytes",
+        imageUrl: "https://images.unsplash.com/photo-1742328114761-18b9304e0c95",
+        sourceUrl: "https://unsplash.com/photos/chimpanzee-sitting-on-a-tree-branch-in-the-forest-zIZUrCRQjkM",
+        platform: "Unsplash",
+      },
+      {
+        id: "4",
+        name: "Lar Gibbon",
+        species: "Hylobates lar",
+        imageUrl: "https://images.unsplash.com/photo-1757684945606-7644757a3eb9",
+        sourceUrl: "https://unsplash.com/photos/a-gibbon-sits-on-a-bare-tree-branch-vEqnu8hJkPM",
+        platform: "Unsplash",
+      },
+      { id: "5", name: "Chimpanzee", species: "Pan troglodytes",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Chimpanzee_%28Pan_troglodytes%29.jpg/1920px-Chimpanzee_%28Pan_troglodytes%29.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Chimpanzee_(Pan_troglodytes).jpg", platform: "Wikimedia Commons" },
+      { id: "6", name: "Chimpanzee", species: "Pan troglodytes",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Common_chimpanzee_%28Pan_troglodytes_schweinfurthii%29_feeding.jpg/1920px-Common_chimpanzee_%28Pan_troglodytes_schweinfurthii%29_feeding.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Common_chimpanzee_(Pan_troglodytes_schweinfurthii)_feeding.jpg", platform: "Wikimedia Commons" },
+      { id: "7", name: "Chimpanzee", species: "Pan troglodytes",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Common_chimpanzee_%28Pan_troglodytes_schweinfurthii%29_grooming_Kibale.jpg/1920px-Common_chimpanzee_%28Pan_troglodytes_schweinfurthii%29_grooming_Kibale.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Common_chimpanzee_(Pan_troglodytes_schweinfurthii)_grooming_Kibale.jpg", platform: "Wikimedia Commons" },
+      { id: "8", name: "Chimpanzee", species: "Pan troglodytes",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Pan_troglodytes_-_Karlsruhe_Zoo.jpg/1920px-Pan_troglodytes_-_Karlsruhe_Zoo.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Pan_troglodytes_-_Karlsruhe_Zoo.jpg", platform: "Wikimedia Commons" },
+      { id: "9", name: "Chimpanzee", species: "Pan troglodytes",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/2020-07-04_-_Schimpanse_%28Pan_troglodytes%29_-_Tierpark_Gettorf.jpg/1920px-2020-07-04_-_Schimpanse_%28Pan_troglodytes%29_-_Tierpark_Gettorf.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:2020-07-04_-_Schimpanse_(Pan_troglodytes)_-_Tierpark_Gettorf.jpg", platform: "Wikimedia Commons" },
+      { id: "10", name: "Bonobo", species: "Pan paniscus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Pan_paniscus_%28Bonobo_baby_and_mother%29.jpg/1920px-Pan_paniscus_%28Bonobo_baby_and_mother%29.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Pan_paniscus_(Bonobo_baby_and_mother).jpg", platform: "Wikimedia Commons" },
+      { id: "11", name: "Bonobo", species: "Pan paniscus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Bonobo_%28Pan_paniscus%29_at_Lola_Ya_Bonobo_-_1.JPG/1920px-Bonobo_%28Pan_paniscus%29_at_Lola_Ya_Bonobo_-_1.JPG",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Bonobo_(Pan_paniscus)_at_Lola_Ya_Bonobo_-_1.JPG", platform: "Wikimedia Commons" },
+      { id: "12", name: "Bonobo", species: "Pan paniscus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Pan_paniscus_in_S%C3%A3o_Paulo_Zoo.jpg/1920px-Pan_paniscus_in_S%C3%A3o_Paulo_Zoo.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Pan_paniscus_in_S%C3%A3o_Paulo_Zoo.jpg", platform: "Wikimedia Commons" },
+      { id: "13", name: "Bonobo", species: "Pan paniscus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Pan_paniscus_in_Ouwehands_Dierenpark.jpg/1920px-Pan_paniscus_in_Ouwehands_Dierenpark.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Pan_paniscus_in_Ouwehands_Dierenpark.jpg", platform: "Wikimedia Commons" },
+      { id: "14", name: "Western Lowland Gorilla", species: "Gorilla gorilla gorilla",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Western_lowland_gorilla_%28Gorilla_gorilla_gorilla%29_closeup_eating.jpg/1920px-Western_lowland_gorilla_%28Gorilla_gorilla_gorilla%29_closeup_eating.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Western_lowland_gorilla_(Gorilla_gorilla_gorilla)_closeup_eating.jpg", platform: "Wikimedia Commons" },
+      { id: "15", name: "Western Lowland Gorilla", species: "Gorilla gorilla gorilla",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/N%27Tami%2C_Western_Gorilla.jpg/1920px-N%27Tami%2C_Western_Gorilla.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:N%27Tami,_Western_Gorilla.jpg", platform: "Wikimedia Commons" },
+      { id: "16", name: "Western Lowland Gorilla", species: "Gorilla gorilla gorilla",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Male_Gorilla_gorilla_gorilla_Apenheul_2023.jpg/1920px-Male_Gorilla_gorilla_gorilla_Apenheul_2023.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Male_Gorilla_gorilla_gorilla_Apenheul_2023.jpg", platform: "Wikimedia Commons" },
+      { id: "17", name: "Mountain Gorilla", species: "Gorilla beringei beringei",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Mountain_gorilla_%28Gorilla_beringei_beringei%29_eating.jpg/1920px-Mountain_gorilla_%28Gorilla_beringei_beringei%29_eating.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Mountain_gorilla_(Gorilla_beringei_beringei)_eating.jpg", platform: "Wikimedia Commons" },
+      { id: "18", name: "Mountain Gorilla", species: "Gorilla beringei beringei",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Mountain_gorilla_%28Gorilla_beringei_beringei%29_female_with_baby.jpg/1920px-Mountain_gorilla_%28Gorilla_beringei_beringei%29_female_with_baby.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Mountain_gorilla_(Gorilla_beringei_beringei)_female_with_baby.jpg", platform: "Wikimedia Commons" },
+      { id: "19", name: "Mountain Gorilla", species: "Gorilla beringei beringei",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Mountain_gorilla_%28Gorilla_beringei_beringei%29_yawn.jpg/1920px-Mountain_gorilla_%28Gorilla_beringei_beringei%29_yawn.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Mountain_gorilla_(Gorilla_beringei_beringei)_yawn.jpg", platform: "Wikimedia Commons" },
+      { id: "20", name: "Mountain Gorilla", species: "Gorilla beringei beringei",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/068_Mountain_gorilla_close-up_at_Bwindi_Impenetrable_Forest_National_Park_Photo_by_Giles_Laurent.jpg/1920px-068_Mountain_gorilla_close-up_at_Bwindi_Impenetrable_Forest_National_Park_Photo_by_Giles_Laurent.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:068_Mountain_gorilla_close-up_at_Bwindi_Impenetrable_Forest_National_Park_Photo_by_Giles_Laurent.jpg", platform: "Wikimedia Commons" },
+      { id: "21", name: "Mountain Gorilla", species: "Gorilla beringei beringei",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Gorila_de_monta%C3%B1a_%28Gorilla_beringei_beringei%29%2C_parque_nacional_de_la_Selva_Impenetrable_de_Bwindi%2C_Uganda%2C_2024-02-02%2C_DD_14.jpg/1920px-Gorila_de_monta%C3%B1a_%28Gorilla_beringei_beringei%29%2C_parque_nacional_de_la_Selva_Impenetrable_de_Bwindi%2C_Uganda%2C_2024-02-02%2C_DD_14.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Gorila_de_monta%C3%B1a_(Gorilla_beringei_beringei),_parque_nacional_de_la_Selva_Impenetrable_de_Bwindi,_Uganda,_2024-02-02,_DD_14.jpg", platform: "Wikimedia Commons" },
+      { id: "22", name: "Bornean Orangutan", species: "Pongo pygmaeus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Bornean_orangutan_%28Pongo_pygmaeus%29%2C_Tanjung_Putting_National_Park_04.jpg/1920px-Bornean_orangutan_%28Pongo_pygmaeus%29%2C_Tanjung_Putting_National_Park_04.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Bornean_orangutan_(Pongo_pygmaeus),_Tanjung_Putting_National_Park_04.jpg", platform: "Wikimedia Commons" },
+      { id: "23", name: "Bornean Orangutan", species: "Pongo pygmaeus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Bornean_orangutan_%28Pongo_pygmaeus%29%2C_Tanjung_Putting_National_Park_08.jpg/1920px-Bornean_orangutan_%28Pongo_pygmaeus%29%2C_Tanjung_Putting_National_Park_08.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Bornean_orangutan_(Pongo_pygmaeus),_Tanjung_Putting_National_Park_08.jpg", platform: "Wikimedia Commons" },
+      { id: "24", name: "Bornean Orangutan", species: "Pongo pygmaeus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Bornean_orangutan_%28Pongo_pygmaeus%29%2C_Tanjung_Putting_National_Park_11.jpg/1920px-Bornean_orangutan_%28Pongo_pygmaeus%29%2C_Tanjung_Putting_National_Park_11.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Bornean_orangutan_(Pongo_pygmaeus),_Tanjung_Putting_National_Park_11.jpg", platform: "Wikimedia Commons" },
+      { id: "25", name: "Bornean Orangutan", species: "Pongo pygmaeus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Orangutan_Kalimantan_%28Pongo_pygmaeus%29.jpg/1920px-Orangutan_Kalimantan_%28Pongo_pygmaeus%29.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Orangutan_Kalimantan_(Pongo_pygmaeus).jpg", platform: "Wikimedia Commons" },
+      { id: "26", name: "Bornean Orangutan", species: "Pongo pygmaeus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Pongo_pygmaeus_in_Ouwehands_Dierenpark_01.jpg/1920px-Pongo_pygmaeus_in_Ouwehands_Dierenpark_01.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Pongo_pygmaeus_in_Ouwehands_Dierenpark_01.jpg", platform: "Wikimedia Commons" },
+      { id: "27", name: "Sumatran Orangutan", species: "Pongo abelii",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_February_2023_03.jpg/1920px-Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_February_2023_03.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Sumatran_Orangutan_(Pongo_abelii)_at_Perth_Zoo,_February_2023_03.jpg", platform: "Wikimedia Commons" },
+      { id: "28", name: "Sumatran Orangutan", species: "Pongo abelii",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_October_2024_01.jpg/1920px-Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_October_2024_01.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Sumatran_Orangutan_(Pongo_abelii)_at_Perth_Zoo,_October_2024_01.jpg", platform: "Wikimedia Commons" },
+      { id: "29", name: "Sumatran Orangutan", species: "Pongo abelii",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_February_2023_09.jpg/1920px-Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_February_2023_09.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Sumatran_Orangutan_(Pongo_abelii)_at_Perth_Zoo,_February_2023_09.jpg", platform: "Wikimedia Commons" },
+      { id: "30", name: "Sumatran Orangutan", species: "Pongo abelii",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_October_2024_07.jpg/1920px-Sumatran_Orangutan_%28Pongo_abelii%29_at_Perth_Zoo%2C_October_2024_07.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Sumatran_Orangutan_(Pongo_abelii)_at_Perth_Zoo,_October_2024_07.jpg", platform: "Wikimedia Commons" },
+      { id: "31", name: "Lar Gibbon", species: "Hylobates lar",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Wei%C3%9Fhandgibbon_Hylobates_lar_Wien_Tiergarten_Sch%C3%B6nbrunn.jpg/1920px-Wei%C3%9Fhandgibbon_Hylobates_lar_Wien_Tiergarten_Sch%C3%B6nbrunn.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Wei%C3%9Fhandgibbon_Hylobates_lar_Wien_Tiergarten_Sch%C3%B6nbrunn.jpg", platform: "Wikimedia Commons" },
+      { id: "32", name: "Lar Gibbon", species: "Hylobates lar",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/20200526_Hylobates_lar_01.jpg/1920px-20200526_Hylobates_lar_01.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:20200526_Hylobates_lar_01.jpg", platform: "Wikimedia Commons" },
+      { id: "33", name: "Lar Gibbon", species: "Hylobates lar",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Hylobates_lar_in_Tiergarten_Sch%C3%B6nbrunn_24_July_2020_JM_%284%29.jpg/1920px-Hylobates_lar_in_Tiergarten_Sch%C3%B6nbrunn_24_July_2020_JM_%284%29.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Hylobates_lar_in_Tiergarten_Sch%C3%B6nbrunn_24_July_2020_JM_(4).jpg", platform: "Wikimedia Commons" },
+      { id: "34", name: "Lar Gibbon", species: "Hylobates lar",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Lar_gibbon_Female_and_Baby_Hylobates_Lar_White-Handed_Gibbons_York%27s_Wild_Kingdom_York_Maine.jpg/1920px-Lar_gibbon_Female_and_Baby_Hylobates_Lar_White-Handed_Gibbons_York%27s_Wild_Kingdom_York_Maine.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Lar_gibbon_Female_and_Baby_Hylobates_Lar_White-Handed_Gibbons_York%27s_Wild_Kingdom_York_Maine.jpg", platform: "Wikimedia Commons" },
+      { id: "35", name: "Lar Gibbon", species: "Hylobates lar",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Hylobates_lar_in_Ouwehands_Dierenpark_02.jpg/1920px-Hylobates_lar_in_Ouwehands_Dierenpark_02.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Hylobates_lar_in_Ouwehands_Dierenpark_02.jpg", platform: "Wikimedia Commons" },
+      { id: "36", name: "Siamang", species: "Symphalangus syndactylus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Siamang_Symphalangus_syndactylus_Tierpark_Hellabrunn-1.jpg/1920px-Siamang_Symphalangus_syndactylus_Tierpark_Hellabrunn-1.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Siamang_Symphalangus_syndactylus_Tierpark_Hellabrunn-1.jpg", platform: "Wikimedia Commons" },
+      { id: "37", name: "Siamang", species: "Symphalangus syndactylus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/2020-10-07_Siamang_%28Symphalangus_syndactylus%29_at_Taronga_Western_Plains_Zoo%2C_Dubbo%2C_NSW.jpg/1920px-2020-10-07_Siamang_%28Symphalangus_syndactylus%29_at_Taronga_Western_Plains_Zoo%2C_Dubbo%2C_NSW.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:2020-10-07_Siamang_(Symphalangus_syndactylus)_at_Taronga_Western_Plains_Zoo,_Dubbo,_NSW.jpg", platform: "Wikimedia Commons" },
+      { id: "38", name: "Siamang", species: "Symphalangus syndactylus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Siamang_%28Symphalangus_syndactylus%29_%28CWPG%29.jpg/1920px-Siamang_%28Symphalangus_syndactylus%29_%28CWPG%29.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Siamang_(Symphalangus_syndactylus)_(CWPG).jpg", platform: "Wikimedia Commons" },
+      { id: "39", name: "Siamang", species: "Symphalangus syndactylus",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Siamang_Symphalangus_syndactylus_Tierpark_Hellabrunn-21.jpg/1920px-Siamang_Symphalangus_syndactylus_Tierpark_Hellabrunn-21.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Siamang_Symphalangus_syndactylus_Tierpark_Hellabrunn-21.jpg", platform: "Wikimedia Commons" },
+      { id: "40", name: "Northern White-Cheeked Gibbon", species: "Nomascus leucogenys",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Northern_white-cheeked_gibbon_%28Nomascus_leucogenys%29_in_Zooparc_de_Tr%C3%A9gomeur%2C_2025.jpg/1920px-Northern_white-cheeked_gibbon_%28Nomascus_leucogenys%29_in_Zooparc_de_Tr%C3%A9gomeur%2C_2025.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Northern_white-cheeked_gibbon_(Nomascus_leucogenys)_in_Zooparc_de_Tr%C3%A9gomeur,_2025.jpg", platform: "Wikimedia Commons" },
+      { id: "41", name: "Northern White-Cheeked Gibbon", species: "Nomascus leucogenys",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Gibon_b%C4%9Blol%C3%ADc%C3%AD_%28Nomascus_leucogenys%29_-_ZOO_Plze%C5%88_01.jpg/1920px-Gibon_b%C4%9Blol%C3%ADc%C3%AD_%28Nomascus_leucogenys%29_-_ZOO_Plze%C5%88_01.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Gibon_b%C4%9Blol%C3%ADc%C3%AD_(Nomascus_leucogenys)_-_ZOO_Plze%C5%88_01.jpg", platform: "Wikimedia Commons" },
+      { id: "42", name: "Northern White-Cheeked Gibbon", species: "Nomascus leucogenys",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Nomascus_leucogenys_female_and_male.jpg/1920px-Nomascus_leucogenys_female_and_male.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Nomascus_leucogenys_female_and_male.jpg", platform: "Wikimedia Commons" },
+      { id: "43", name: "Northern White-Cheeked Gibbon", species: "Nomascus leucogenys",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Female_Nomascus_leucogenys_-_Adelaide_Zoo.JPG/1920px-Female_Nomascus_leucogenys_-_Adelaide_Zoo.JPG",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Female_Nomascus_leucogenys_-_Adelaide_Zoo.JPG", platform: "Wikimedia Commons" },
+      { id: "44", name: "Silvery Gibbon", species: "Hylobates moloch",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Owa_Jawa_%28Hylobates_moloch%29.jpg/1920px-Owa_Jawa_%28Hylobates_moloch%29.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Owa_Jawa_(Hylobates_moloch).jpg", platform: "Wikimedia Commons" },
+      { id: "45", name: "Silvery Gibbon", species: "Hylobates moloch",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Silbergibbon_Hylobates_moloch_Tierpark_Hellabrunn-17.jpg/1920px-Silbergibbon_Hylobates_moloch_Tierpark_Hellabrunn-17.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Silbergibbon_Hylobates_moloch_Tierpark_Hellabrunn-17.jpg", platform: "Wikimedia Commons" },
+      { id: "46", name: "Silvery Gibbon", species: "Hylobates moloch",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Silbergibbon_Hylobates_moloch_Tierpark_Hellabrunn-33.jpg/1920px-Silbergibbon_Hylobates_moloch_Tierpark_Hellabrunn-33.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Silbergibbon_Hylobates_moloch_Tierpark_Hellabrunn-33.jpg", platform: "Wikimedia Commons" },
+      { id: "47", name: "Silvery Gibbon", species: "Hylobates moloch",
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/13/Hylobates_moloch_101637.jpg",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Hylobates_moloch_101637.jpg", platform: "Wikimedia Commons" },
+    ];
+
+    /* ================================================================== */
+
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    const RATING_LABELS = {
+      1: "Banana Peel",
+      2: "Rough Morning",
+      3: "Low Canopy",
+      4: "Mid Jungle",
+      5: "Solid Primate",
+      6: "Respectable",
+      7: "Strong Swing",
+      8: "Great Ape",
+      9: "Alpha Energy",
+      10: "Jungle Royalty",
+    };
+
+    const AVATARS = ["🦍", "🦧", "🐵", "🙈", "🙉", "🙊"];
+    const CONFETTI_EMOJI = ["🍌", "🦍", "🌴", "✨", "🥭", "🍃"];
+
+    const withParams = (url, params) => url + (url.includes("?") ? "&" : "?") + params;
+    const heroSrc = (ape) => withParams(ape.imageUrl, "auto=format&fit=crop&q=80&w=1600");
+    const thumbSrc = (ape) => withParams(ape.imageUrl, "auto=format&fit=crop&q=60&w=160");
+
+    const minutesAgo = (m) => Date.now() - m * 60000;
+
+    const SEED_COMMENTS = {
+      "1": [
+        { id: "seed-1a", author: "CanopyCritic", avatar: "🦧", mine: false, ts: minutesAgo(46), text: "That gaze contains at least three PhDs' worth of quiet wisdom." },
+        { id: "seed-1b", author: "TreetopTina", avatar: "🐵", mine: false, ts: minutesAgo(131), text: "10/10 hair routine. Would ask for product recommendations." },
+      ],
+      "2": [
+        { id: "seed-2a", author: "BananaBaron", avatar: "🦍", mine: false, ts: minutesAgo(74), text: "Absolute unit. The silver is earned, not given." },
+      ],
+      "3": [
+        { id: "seed-3a", author: "JungleJane", avatar: "🙈", mine: false, ts: minutesAgo(28), text: "Caught mid-thought. Honestly? Relatable energy." },
+      ],
+      "4": [
+        { id: "seed-4a", author: "SwingKing", avatar: "🙉", mine: false, ts: minutesAgo(203), text: "Those arms clear a 15-meter gap like it's a coffee run." },
+      ],
+    };
+
+    function timeAgo(ts) {
+      const seconds = Math.max(0, (Date.now() - ts) / 1000);
+      if (seconds < 60) return "just now";
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return minutes + "m ago";
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return hours + "h ago";
+      return Math.floor(hours / 24) + "d ago";
+    }
+
+    /* Persist a piece of state to localStorage so a refresh keeps the session. */
+    function usePersistentState(key, initialValue) {
+      const [value, setValue] = useState(() => {
+        try {
+          const raw = window.localStorage.getItem(key);
+          return raw == null ? initialValue : JSON.parse(raw);
+        } catch (err) {
+          return initialValue;
+        }
+      });
+      useEffect(() => {
+        try {
+          window.localStorage.setItem(key, JSON.stringify(value));
+        } catch (err) {
+          /* storage unavailable (private mode, etc.) — session still works */
+        }
+      }, [key, value]);
+      return [value, setValue];
+    }
+
+    /* ----------------------------- icons ----------------------------- */
+
+    function ChevronIcon({ flipped }) {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={"h-5 w-5" + (flipped ? " rotate-180" : "")} aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      );
+    }
+
+    function CameraIcon() {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-emerald-400" aria-hidden="true">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      );
+    }
+
+    function ArrowUpRightIcon() {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true">
+          <path d="M7 17L17 7M8 7h9v9" />
+        </svg>
+      );
+    }
+
+    /* --------------------------- confetti ---------------------------- */
+
+    function ConfettiBurst({ burstKey }) {
+      const pieces = useMemo(() => {
+        return Array.from({ length: 18 }, () => ({
+          emoji: CONFETTI_EMOJI[Math.floor(Math.random() * CONFETTI_EMOJI.length)],
+          dx: (Math.random() * 2 - 1) * 230,
+          dy: -(70 + Math.random() * 240),
+          rot: (Math.random() * 2 - 1) * 420,
+          delay: Math.random() * 0.12,
+          size: 15 + Math.random() * 19,
+        }));
+      }, [burstKey]);
+
+      return (
+        <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden="true">
+          {pieces.map((p, i) => (
+            <span
+              key={burstKey + "-" + i}
+              className="confetti-piece"
+              style={{
+                left: "50%",
+                top: "55%",
+                fontSize: p.size + "px",
+                animationDelay: p.delay + "s",
+                "--dx": p.dx + "px",
+                "--dy": p.dy + "px",
+                "--rot": p.rot + "deg",
+              }}
+            >
+              {p.emoji}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    /* ---------------------------- header ----------------------------- */
+
+    function Header({ ratedCount, total, allRated, onReset }) {
+      return (
+        <header className="sticky top-0 z-40 border-b border-slate-800/70 bg-slate-950/85 backdrop-blur-md">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 text-xl shadow-[0_0_20px_rgba(52,211,153,0.15)]">🦍</span>
+              <div>
+                <h1 className="font-display text-xl font-black tracking-tight text-white">
+                  ape<span className="text-emerald-400">-review</span>
+                </h1>
+                <p className="-mt-0.5 text-[11px] text-slate-500">The internet's most serious ape review board</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {allRated ? (
+                <span className="hidden rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300 sm:block">Troop complete ✓</span>
+              ) : (
+                <span className="hidden rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-400 sm:block">
+                  {ratedCount} / {total} reviewed
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onReset}
+                title="Clear all ratings & comments"
+                className="rounded-xl border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:border-rose-400/50 hover:text-rose-300 active:scale-95"
+              >
+                ↺ Reset
+              </button>
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    /* --------------------------- hero card --------------------------- */
+
+    function HeroCard({ ape, index, total, rating, celebration, loaded, failed, onLoad, onFail, onStep }) {
+      const imgRef = useRef(null);
+
+      // Safety net: cached images can fire `load` before React attaches the handler.
+      useEffect(() => {
+        const el = imgRef.current;
+        if (el && el.complete && el.naturalWidth > 0) onLoad(ape.id);
+      }, [ape.id]);
+
+      return (
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl shadow-emerald-950/40 md:aspect-[16/10]">
+          {!failed && (
+            <img
+              ref={imgRef}
+              key={ape.id}
+              src={heroSrc(ape)}
+              alt={ape.name + " — " + ape.species}
+              onLoad={() => onLoad(ape.id)}
+              onError={() => onFail(ape.id)}
+              className={"h-full w-full object-cover " + (loaded ? "ape-enter" : "opacity-0")}
+            />
+          )}
+
+          {!failed && !loaded && (
+            <div className="absolute inset-0 grid animate-pulse place-items-center bg-gradient-to-br from-slate-800 to-slate-900">
+              <span className="text-6xl opacity-25">🦍</span>
+            </div>
+          )}
+
+          {failed && (
+            <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-center">
+              <div>
+                <div className="text-5xl">🙈</div>
+                <p className="mt-3 text-sm text-slate-400">
+                  This photo went missing in the jungle.<br />Try the original link below.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent px-5 pb-4 pt-20">
+            <div key={ape.id} className="name-in">
+              <h2 className="font-display text-2xl font-bold tracking-tight text-white drop-shadow sm:text-3xl">{ape.name}</h2>
+              <p className="text-sm italic text-emerald-300/90">{ape.species}</p>
+            </div>
+          </div>
+
+          <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2">
+            {typeof rating === "number" ? (
+              <span className="rounded-full border border-amber-300/40 bg-slate-950/70 px-3 py-1 text-xs font-bold text-amber-300 backdrop-blur">★ Your score: {rating}/10</span>
+            ) : (
+              <span className="rounded-full border border-emerald-400/30 bg-slate-950/70 px-3 py-1 text-xs font-semibold text-emerald-300 backdrop-blur">Awaiting your verdict</span>
+            )}
+            <span className="rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1 text-xs font-semibold text-slate-300 backdrop-blur">
+              {index + 1} / {total}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onStep(-1)}
+            aria-label="Previous ape"
+            className="absolute left-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-slate-700/80 bg-slate-950/60 text-slate-200 backdrop-blur transition hover:scale-110 hover:border-emerald-400/60 hover:text-emerald-300 active:scale-95"
+          >
+            <ChevronIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => onStep(1)}
+            aria-label="Next ape"
+            className="absolute right-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-slate-700/80 bg-slate-950/60 text-slate-200 backdrop-blur transition hover:scale-110 hover:border-emerald-400/60 hover:text-emerald-300 active:scale-95"
+          >
+            <ChevronIcon flipped />
+          </button>
+
+          {celebration && (
+            <div className="absolute inset-0 z-20 grid place-items-center bg-slate-950/45 backdrop-blur-[2px]">
+              <ConfettiBurst burstKey={celebration.key} />
+              <div className="stamp rounded-3xl border-4 border-emerald-400/90 bg-slate-950/85 px-10 py-6 text-center shadow-[0_0_60px_rgba(52,211,153,0.35)]">
+                <div className="font-display text-6xl font-black leading-none text-emerald-300 sm:text-7xl">
+                  {celebration.score}
+                  <span className="text-2xl font-bold text-emerald-500/80 sm:text-3xl">/10</span>
+                </div>
+                <div className="mt-2 text-xs font-bold uppercase tracking-[0.25em] text-amber-300 sm:text-sm">{RATING_LABELS[celebration.score]}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* -------------------------- rating panel ------------------------- */
+
+    function RatingPanel({ ape, myRating, disabled, onRate }) {
+      const [hovered, setHovered] = useState(null);
+      useEffect(() => setHovered(null), [ape.id]);
+
+      return (
+        <section className="mt-5 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h3 className="font-display text-lg font-bold text-white">Rate this ape</h3>
+            <p className="min-h-[1.25rem] text-sm font-semibold text-amber-300" aria-live="polite">
+              {hovered != null ? (
+                <span>{hovered}/10 · {RATING_LABELS[hovered]}</span>
+              ) : typeof myRating === "number" ? (
+                <span>You scored this ape <span className="text-amber-200">{myRating}/10</span> — pick again to change it</span>
+              ) : (
+                <span className="font-normal text-slate-500">1 = banana peel · 10 = jungle royalty</span>
+              )}
+            </p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-10 sm:gap-2.5">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((s) => {
+              const isChosen = myRating === s;
+              const inFill = hovered != null && s <= hovered;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  disabled={disabled}
+                  title={s + " — " + RATING_LABELS[s]}
+                  onClick={() => onRate(s)}
+                  onMouseEnter={() => setHovered(s)}
+                  onMouseLeave={() => setHovered(null)}
+                  onFocus={() => setHovered(s)}
+                  onBlur={() => setHovered(null)}
+                  className={[
+                    "aspect-square rounded-2xl border text-base font-bold outline-none transition-all duration-150 sm:text-lg",
+                    "disabled:pointer-events-none",
+                    isChosen
+                      ? "border-amber-300 bg-amber-400 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.35)]"
+                      : inFill
+                      ? s === hovered
+                        ? "-translate-y-1 scale-110 border-emerald-300 bg-emerald-400 text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.45)]"
+                        : "border-emerald-400/60 bg-emerald-500/20 text-emerald-200"
+                      : "border-slate-700 bg-slate-800/80 text-slate-300 hover:border-emerald-400/60 hover:text-emerald-200 active:scale-90",
+                  ].join(" ")}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-3 text-xs text-slate-500">
+            Pro tip: keys <kbd>1</kbd>–<kbd>9</kbd> and <kbd>0</kbd> (= 10) rate instantly.
+          </p>
+        </section>
+      );
+    }
+
+    /* ------------------------- comments panel ------------------------ */
+
+    function CommentsPanel({ ape, comments, onAdd }) {
+      const [draft, setDraft] = useState("");
+      const [, setClock] = useState(0);
+
+      // Re-render every 30s so relative timestamps stay honest.
+      useEffect(() => {
+        const t = window.setInterval(() => setClock((c) => c + 1), 30000);
+        return () => window.clearInterval(t);
+      }, []);
+
+      const list = comments[ape.id] || [];
+
+      const submit = (e) => {
+        e.preventDefault();
+        const text = draft.trim();
+        if (!text) return;
+        onAdd(ape.id, text);
+        setDraft("");
+      };
+
+      return (
+        <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h3 className="font-display text-lg font-bold text-white">
+              💬 Jungle Chatter
+              <span className="ml-2 align-middle rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-300">{list.length}</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              thoughts on <span className="font-semibold text-slate-300">{ape.name}</span> only
+            </p>
+          </div>
+
+          <form onSubmit={submit} className="mt-4 flex gap-2">
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              maxLength={280}
+              autoComplete="off"
+              placeholder={"Say something about " + ape.name + "…"}
+              className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950/70 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/20"
+            />
+            <button
+              type="submit"
+              disabled={!draft.trim()}
+              className="rounded-xl bg-emerald-500 px-4 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Post
+            </button>
+          </form>
+
+          <ul key={ape.id} className="nice-scroll mt-4 max-h-[24rem] space-y-2.5 overflow-y-auto pr-1">
+            {list.length === 0 && (
+              <li className="rounded-2xl border border-dashed border-slate-700 p-5 text-center text-sm text-slate-500">
+                🌿 No chatter yet — be the first to weigh in on {ape.name}.
+              </li>
+            )}
+            {list.map((c) => (
+              <li
+                key={c.id}
+                className={"comment-in flex gap-3 rounded-2xl border p-3 " + (c.mine ? "border-emerald-400/25 bg-emerald-500/[0.06]" : "border-slate-800 bg-slate-950/60")}
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-slate-700 bg-slate-800 text-base">{c.avatar}</span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className={"text-sm font-bold " + (c.mine ? "text-emerald-300" : "text-slate-200")}>{c.author}</span>
+                    <span className="text-[11px] text-slate-500">{timeAgo(c.ts)}</span>
+                  </div>
+                  <p className="mt-0.5 break-words text-sm leading-relaxed text-slate-300">{c.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+    }
+
+    /* --------------------------- stats panel ------------------------- */
+
+    function StatsPanel({ ratings, comments, onJump }) {
+      const total = APE_DATABASE.length;
+      const rated = APE_DATABASE.filter((a) => typeof ratings[a.id] === "number");
+      const avg = rated.length ? rated.reduce((sum, a) => sum + ratings[a.id], 0) / rated.length : null;
+      const commentCount = Object.values(comments).reduce((sum, list) => sum + list.length, 0);
+      const leaders = [...rated].sort((a, b) => ratings[b.id] - ratings[a.id] || Number(a.id) - Number(b.id)).slice(0, 3);
+      const medals = ["🥇", "🥈", "🥉"];
+      const pct = Math.round((rated.length / total) * 100);
+
+      return (
+        <aside className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6">
+          <h3 className="font-display text-lg font-bold text-white">📊 Troop Stats</h3>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Apes Reviewed</p>
+              <p className="mt-1 font-display text-3xl font-black text-emerald-400">
+                {rated.length}
+                <span className="text-base font-bold text-slate-500"> / {total}</span>
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-all duration-700" style={{ width: pct + "%" }} />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Average Score</p>
+              <p className="mt-1 font-display text-3xl font-black text-amber-300">{avg == null ? "–" : avg.toFixed(1)}</p>
+              <p className="mt-2 text-[11px] text-slate-500">{avg == null ? "no ratings yet" : "across " + rated.length + (rated.length === 1 ? " rating" : " ratings")}</p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2.5 text-sm">
+            <span className="text-slate-400">💬 Comments dropped</span>
+            <span className="font-bold text-emerald-300">{commentCount}</span>
+          </div>
+
+          <div className="mt-5">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">🏆 Leaderboard — your top troop</h4>
+            {leaders.length === 0 ? (
+              <div className="mt-2 rounded-2xl border border-dashed border-slate-700 p-4 text-center text-sm text-slate-500">
+                Rate a few apes to crown your champions.
+              </div>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {leaders.map((a, i) => (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onClick={() => onJump(APE_DATABASE.indexOf(a))}
+                      className="group flex w-full items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-2.5 text-left transition hover:border-emerald-400/50 hover:bg-slate-900"
+                    >
+                      <span className="text-lg">{medals[i]}</span>
+                      <img src={thumbSrc(a)} alt={a.name} loading="lazy" className="h-12 w-12 rounded-xl border border-slate-700 object-cover" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-slate-200 group-hover:text-emerald-300">{a.name}</span>
+                        <span className="block truncate text-xs italic text-slate-500">{a.species}</span>
+                      </span>
+                      <span className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-2 py-1 text-xs font-black text-amber-300">{ratings[a.id]}/10</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </aside>
+      );
+    }
+
+    /* ------------------------ completion modal ----------------------- */
+
+    function CompletionModal({ total, average, champion, championScore, onClose }) {
+      useEffect(() => {
+        const onKey = (e) => {
+          if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+      }, [onClose]);
+
+      return (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+          <div
+            className="pop-in relative w-full max-w-md overflow-hidden rounded-3xl border border-emerald-400/30 bg-slate-900 p-8 text-center shadow-[0_0_80px_rgba(52,211,153,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ConfettiBurst burstKey="troop-complete" />
+            <div className="text-6xl">🏆</div>
+            <h3 className="mt-4 font-display text-2xl font-black text-white">Troop fully reviewed!</h3>
+            <p className="mt-2 text-sm text-slate-400">
+              You judged all <span className="font-bold text-emerald-300">{total} apes</span> with an average score of <span className="font-bold text-amber-300">{average}</span>.
+            </p>
+            {champion && (
+              <p className="mt-1 text-sm text-slate-400">
+                Reigning champion: <span className="font-bold text-emerald-300">{champion}</span> ({championScore}/10)
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-6 rounded-xl bg-emerald-500 px-6 py-2.5 font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-95"
+            >
+              Keep exploring 🦍
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ------------------------------ app ------------------------------ */
+
+    function App() {
+      const n = APE_DATABASE.length;
+
+      const [rawIndex, setRawIndex] = usePersistentState("aperate:v1:index", 0);
+      const [ratings, setRatings] = usePersistentState("aperate:v1:ratings", {});
+      const [comments, setComments] = usePersistentState("aperate:v1:comments", SEED_COMMENTS);
+
+      const [celebration, setCelebration] = useState(null); // { score, key }
+      const [complete, setComplete] = useState(false);
+      const [loadedIds, setLoadedIds] = useState({});
+      const [failedIds, setFailedIds] = useState({});
+      const advanceTimer = useRef(null);
+
+      const parsed = Number(rawIndex);
+      const baseIndex = Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+      const index = ((baseIndex % n) + n) % n;
+      const ape = APE_DATABASE[index];
+      const myRating = ratings[ape.id];
+
+      const ratedApes = APE_DATABASE.filter((a) => typeof ratings[a.id] === "number");
+      const avgScore = ratedApes.length ? ratedApes.reduce((sum, a) => sum + ratings[a.id], 0) / ratedApes.length : null;
+      const isAllRated = ratedApes.length === n;
+      const champion = ratedApes.length
+        ? ratedApes.reduce((best, a) => (ratings[a.id] > ratings[best.id] ? a : best), ratedApes[0])
+        : null;
+
+      const jumpTo = (i) => setRawIndex(((i % n) + n) % n);
+      const goTo = (i) => {
+        if (celebration) return;
+        jumpTo(i);
+      };
+      const step = (delta) => goTo(index + delta);
+
+      const rate = (score) => {
+        if (celebration || complete) return;
+        const wasComplete = APE_DATABASE.every((a) => typeof ratings[a.id] === "number");
+        const nextRatings = { ...ratings, [ape.id]: score };
+        const nowComplete = APE_DATABASE.every((a) => typeof nextRatings[a.id] === "number");
+
+        setRatings(nextRatings);
+        setCelebration({ score, key: Date.now() });
+
+        window.clearTimeout(advanceTimer.current);
+        advanceTimer.current = window.setTimeout(() => {
+          setCelebration(null);
+          let target = (index + 1) % n; // default: simple next
+          for (let s = 1; s <= n; s++) {
+            const candidate = (index + s) % n;
+            if (typeof nextRatings[APE_DATABASE[candidate].id] !== "number") {
+              target = candidate;
+              break;
+            }
+          }
+          jumpTo(target);
+          if (!wasComplete && nowComplete) setComplete(true);
+        }, 1150);
+      };
+
+      useEffect(() => () => window.clearTimeout(advanceTimer.current), []);
+
+      // Preload the next ape's photo for a seamless advance.
+      useEffect(() => {
+        const next = APE_DATABASE[(index + 1) % n];
+        const preloader = new Image();
+        preloader.src = heroSrc(next);
+      }, [index, n]);
+
+      // Global keyboard shortcuts: arrows browse, 1–9 & 0 rate.
+      const actionsRef = useRef({});
+      actionsRef.current = { rate, step, modalOpen: complete };
+      useEffect(() => {
+        const onKey = (e) => {
+          const tag = e.target && e.target.tagName;
+          if (tag === "INPUT" || tag === "TEXTAREA" || e.metaKey || e.ctrlKey || e.altKey) return;
+          if (actionsRef.current.modalOpen) return;
+          if (e.key === "ArrowRight") actionsRef.current.step(1);
+          else if (e.key === "ArrowLeft") actionsRef.current.step(-1);
+          else if (/^[0-9]$/.test(e.key)) actionsRef.current.rate(e.key === "0" ? 10 : Number(e.key));
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+      }, []);
+
+      const markLoaded = (id) => setLoadedIds((m) => (m[id] ? m : { ...m, [id]: true }));
+      const markFailed = (id) => setFailedIds((m) => (m[id] ? m : { ...m, [id]: true }));
+
+      const addComment = (apeId, text) => {
+        const comment = {
+          id: "c-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+          author: "You",
+          avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
+          text: text,
+          ts: Date.now(),
+          mine: true,
+        };
+        setComments((prev) => ({ ...prev, [apeId]: [comment, ...(prev[apeId] || [])] }));
+      };
+
+      const resetSession = () => {
+        if (!window.confirm("Reset ape-review? All ratings and comments will be cleared.")) return;
+        window.clearTimeout(advanceTimer.current);
+        setCelebration(null);
+        setComplete(false);
+        setRatings({});
+        setComments(SEED_COMMENTS);
+        setRawIndex(0);
+      };
+
+      return (
+        <div className="min-h-screen">
+          {/* ambient jungle glow */}
+          <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+            <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
+            <div className="absolute -right-40 top-1/3 h-[28rem] w-[28rem] rounded-full bg-amber-400/[0.07] blur-3xl" />
+            <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-emerald-400/[0.06] blur-3xl" />
+          </div>
+
+          <Header ratedCount={ratedApes.length} total={n} allRated={isAllRated} onReset={resetSession} />
+
+          <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+            {/* hero + attribution + rating */}
+            <div className="rise lg:col-start-1 lg:row-start-1">
+              <HeroCard
+                ape={ape}
+                index={index}
+                total={n}
+                rating={myRating}
+                celebration={celebration}
+                loaded={!!loadedIds[ape.id]}
+                failed={!!failedIds[ape.id]}
+                onLoad={markLoaded}
+                onFail={markFailed}
+                onStep={step}
+              />
+
+              {/* attribution + quick-jump dots */}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <a
+                  href={ape.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-2 text-sm text-slate-300 transition hover:border-emerald-400/50 hover:text-emerald-300"
+                >
+                  <CameraIcon />
+                  <span>
+                    Original photo on <span className="font-semibold text-emerald-400 underline decoration-emerald-500/40 decoration-2 underline-offset-4 group-hover:decoration-emerald-300">{ape.platform}</span>
+                  </span>
+                  <ArrowUpRightIcon />
+                </a>
+                <div className="flex items-center gap-2 px-1">
+                  {APE_DATABASE.map((a, i) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => goTo(i)}
+                      aria-label={"Show " + a.name}
+                      title={a.name}
+                      className={
+                        "h-2.5 rounded-full transition-all duration-300 " +
+                        (i === index
+                          ? "w-8 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]"
+                          : typeof ratings[a.id] === "number"
+                          ? "w-2.5 bg-amber-400/70 hover:bg-amber-300"
+                          : "w-2.5 bg-slate-700 hover:bg-slate-500")
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <RatingPanel ape={ape} myRating={myRating} disabled={celebration != null} onRate={rate} />
+            </div>
+
+            {/* per-ape comments */}
+            <div className="rise lg:col-start-1 lg:row-start-2" style={{ animationDelay: "0.12s" }}>
+              <CommentsPanel ape={ape} comments={comments} onAdd={addComment} />
+            </div>
+
+            {/* persistent stats dashboard */}
+            <div className="rise lg:col-start-2 lg:row-span-2 lg:row-start-1" style={{ animationDelay: "0.06s" }}>
+              <div className="lg:sticky lg:top-24">
+                <StatsPanel ratings={ratings} comments={comments} onJump={goTo} />
+              </div>
+            </div>
+          </main>
+
+          <footer className="mx-auto max-w-7xl px-4 pb-10 pt-2 text-center text-xs text-slate-600 sm:px-6">
+            <p>Photos belong to their photographers — follow the source link under each image. Ratings & comments are saved locally in this browser.</p>
+            <p className="mt-2 hidden items-center justify-center gap-1.5 sm:flex">
+              <kbd>←</kbd><kbd>→</kbd> browse&nbsp;·&nbsp;<kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd> rates a 10&nbsp;·&nbsp;<kbd>Enter</kbd> posts your comment
+            </p>
+          </footer>
+
+          {complete && (
+            <CompletionModal
+              total={n}
+              average={avgScore == null ? "0" : avgScore.toFixed(1)}
+              champion={champion ? champion.name : null}
+              championScore={champion ? ratings[champion.id] : null}
+              onClose={() => setComplete(false)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
