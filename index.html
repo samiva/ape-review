@@ -88,7 +88,7 @@
   </style>
 </head>
 
-<body class="bg-slate-950 text-slate-100 antialiased">
+<body class="overflow-x-hidden bg-slate-950 text-slate-100 antialiased">
   <div id="root">
     <div style="min-height: 100vh; display: grid; place-items: center; font-family: sans-serif; color: #64748b; text-align: center;">
       <p>🦍 Loading ape-review…<br /><small>If this message stays, open the browser console (F12) for errors.</small></p>
@@ -917,7 +917,7 @@
 
           <Header ratedCount={ratedApes.length} total={n} allRated={isAllRated} onReset={resetSession} />
 
-          <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+          <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
             {/* hero + attribution + rating */}
             <div className="rise lg:col-start-1 lg:row-start-1">
               <HeroCard
@@ -947,7 +947,7 @@
                   </span>
                   <ArrowUpRightIcon />
                 </a>
-                <div className="flex items-center gap-2 px-1">
+                <div className="nice-scroll -mx-1 flex max-w-full items-center gap-2 overflow-x-auto px-1 py-1">
                   {APE_DATABASE.map((a, i) => (
                     <button
                       key={a.id}
@@ -956,7 +956,7 @@
                       aria-label={"Show " + a.name}
                       title={a.name}
                       className={
-                        "h-2.5 rounded-full transition-all duration-300 " +
+                        "h-2.5 shrink-0 rounded-full transition-all duration-300 " +
                         (i === index
                           ? "w-8 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]"
                           : typeof ratings[a.id] === "number"
